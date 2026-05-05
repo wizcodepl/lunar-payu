@@ -66,12 +66,19 @@ class PayuWebhookController extends Controller
     {
         // PayU wraps the payload under an `order` key.
         $order = (array) ($body['order'] ?? []);
+        $extOrderId = (string) ($order['extOrderId'] ?? '');
+
+        // We send extOrderId as `<lunar_order_id>-<random>` to satisfy PayU's
+        // uniqueness rule. Strip the suffix so downstream lookups by Lunar
+        // order id keep working. Bare numeric extOrderIds (older shops or
+        // test fixtures) still pass through as-is.
+        $orderIdPrefix = $extOrderId !== '' ? explode('-', $extOrderId, 2)[0] : '';
 
         return [
             'payuOrderId' => (string) ($order['orderId'] ?? ''),
             'status' => (string) ($order['status'] ?? ''),
             'amount' => (string) ($order['totalAmount'] ?? ''),
-            'order_id' => (string) ($order['extOrderId'] ?? ''),
+            'order_id' => $orderIdPrefix,
         ];
     }
 }

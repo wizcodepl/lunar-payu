@@ -74,7 +74,7 @@ class PayuPaymentDriver extends AbstractPayment
 
             $result = new PaymentAuthorize(
                 success: false,
-                message: 'PayU createOrder failed: '.$e->getMessage(),
+                message: $e->getMessage(),
                 orderId: $this->order->id,
                 paymentType: (string) config('lunar-payu.driver', 'payu'),
             );
@@ -167,7 +167,10 @@ class PayuPaymentDriver extends AbstractPayment
             'description' => $this->describeOrder($order),
             'currencyCode' => (string) ($order->currency_code ?: 'PLN'),
             'totalAmount' => (string) $totalAmount,
-            'extOrderId' => (string) $order->id,
+            // PayU rejects duplicate `extOrderId` (`ERROR_ORDER_NOT_UNIQUE`),
+            // so we suffix the Lunar order id with a per-attempt random tail.
+            // The webhook controller parses the prefix back to the order id.
+            'extOrderId' => $order->id.'-'.bin2hex(random_bytes(4)),
             'customerIp' => (string) (request()->ip() ?: '127.0.0.1'),
             'continueUrl' => (string) config('lunar-payu.return_url_success'),
             'notifyUrl' => url((string) config('lunar-payu.webhook_path', 'payu/notify')),
