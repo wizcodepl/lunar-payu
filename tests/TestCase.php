@@ -49,7 +49,7 @@ abstract class TestCase extends Orchestra
         $app['config']->set('lunar-payu.client_secret', env('PAYU_CLIENT_SECRET', ''));
         $app['config']->set('lunar-payu.pos_id', env('PAYU_POS_ID', ''));
         $app['config']->set('lunar-payu.second_key', env('PAYU_SECOND_KEY', 'test-second-key'));
-        $app['config']->set('lunar-payu.sandbox', true);
+        $app['config']->set('lunar-payu.base_url', 'https://secure.snd.payu.com');
         $app['config']->set('lunar-payu.return_url_success', 'https://example.test/ok');
         $app['config']->set('lunar-payu.return_url_error', 'https://example.test/err');
     }

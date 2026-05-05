@@ -31,7 +31,7 @@ class PayuClientTest extends TestCase
         $this->skipIfNoSandboxCreds();
 
         $this->client = new PayuClient(
-            sandbox: true,
+            baseUrl: 'https://secure.snd.payu.com',
             clientId: (string) getenv('PAYU_CLIENT_ID'),
             clientSecret: (string) getenv('PAYU_CLIENT_SECRET'),
         );

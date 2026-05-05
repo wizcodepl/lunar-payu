@@ -43,7 +43,11 @@ PAYU_POS_ID="..."
 PAYU_CLIENT_ID="..."
 PAYU_CLIENT_SECRET="..."
 PAYU_SECOND_KEY="..."
-PAYU_SANDBOX=true
+
+# Base URL — omit on production (defaults to https://secure.payu.com).
+# For sandbox / staging:
+PAYU_BASE_URL=https://secure.snd.payu.com
+
 PAYU_RETURN_URL_SUCCESS="https://shop.example/order/thanks"
 PAYU_RETURN_URL_ERROR="https://shop.example/checkout"
 ```

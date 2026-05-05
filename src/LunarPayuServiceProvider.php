@@ -17,9 +17,7 @@ class LunarPayuServiceProvider extends ServiceProvider
     {
         $this->mergeConfigFrom(__DIR__.'/../config/lunar-payu.php', 'lunar-payu');
 
-        $this->app->singleton(PayuClient::class, fn () => new PayuClient(
-            sandbox: (bool) config('lunar-payu.sandbox', true),
-        ));
+        $this->app->singleton(PayuClient::class, fn () => new PayuClient);
 
         $this->app->singleton(PayuSignatureVerifier::class, fn () => new PayuSignatureVerifier);
     }

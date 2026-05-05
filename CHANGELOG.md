@@ -5,6 +5,15 @@ All notable changes to `wizcodepl/lunar-payu` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-05-06
+
+### Changed
+- **Replaced `PAYU_SANDBOX` boolean with `PAYU_BASE_URL`.** Single switch between PayU environments. Defaults to `https://secure.payu.com` (production). For sandbox set `PAYU_BASE_URL=https://secure.snd.payu.com`. Opens the door to PayU's regional production instances (`secure.payu.cz`, `secure.payu.ro`, etc.) without code changes.
+- `PayuClient` constructor: `sandbox: bool` parameter replaced with `?string $baseUrl`. `null` falls back to config. **Breaking only for callers instantiating `PayuClient` directly with the `sandbox:` named arg** — users wiring through the service provider are unaffected.
+
+### Migration
+- `.env`: replace `PAYU_SANDBOX=true` with `PAYU_BASE_URL=https://secure.snd.payu.com`. Production: omit (default is correct).
+
 ## [1.0.0] - 2026-05-05
 
 First stable release. The package is in production-grade shape and validated end-to-end against the real PayU sandbox.

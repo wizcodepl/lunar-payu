@@ -37,15 +37,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Sandbox toggle
+    | Base URL
     |--------------------------------------------------------------------------
     |
-    | When true, all API and signing-cert hosts switch to PayU's sandbox.
-    | The library has no other notion of "environment" — flip this and
-    | everything else follows.
+    | Single switch between PayU environments. Defaults to production.
+    | For local / staging set:
+    |
+    |   PAYU_BASE_URL=https://secure.snd.payu.com
+    |
+    | PayU also runs regional production instances — `secure.payu.com` is the
+    | Polish one, see PayU docs for `secure.payu.cz`, `secure.payu.ro`, etc.
     |
     */
-    'sandbox' => env('PAYU_SANDBOX', true),
+    'base_url' => env('PAYU_BASE_URL', 'https://secure.payu.com'),
 
     /*
     |--------------------------------------------------------------------------

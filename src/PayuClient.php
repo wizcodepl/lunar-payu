@@ -21,21 +21,21 @@ use RuntimeException;
  */
 class PayuClient
 {
-    private const PROD_BASE = 'https://secure.payu.com';
-
-    private const SANDBOX_BASE = 'https://secure.snd.payu.com';
+    private const DEFAULT_BASE_URL = 'https://secure.payu.com';
 
     private const TOKEN_CACHE_KEY = 'lunar-payu:oauth-token';
 
     public function __construct(
-        private readonly bool $sandbox = true,
+        private readonly ?string $baseUrl = null,
         private readonly ?string $clientId = null,
         private readonly ?string $clientSecret = null,
     ) {}
 
     private function baseUrl(): string
     {
-        return $this->sandbox ? self::SANDBOX_BASE : self::PROD_BASE;
+        return $this->baseUrl
+            ?? (string) config('lunar-payu.base_url')
+            ?: self::DEFAULT_BASE_URL;
     }
 
     private function clientId(): string
