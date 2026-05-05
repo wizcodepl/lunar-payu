@@ -137,6 +137,67 @@ class ProcessPayuNotificationTest extends TestCase
         Event::assertDispatched(PayuPaymentRefunded::class);
     }
 
+    public function test_paid_order_rejects_canceled_replay(): void
+    {
+        // Regression: an attacker (or buggy upstream) replays an old
+        // `CANCELED` notification after the order has been settled as
+        // `paid`. We must not flip the order back, and no Cancelled event
+        // must fire.
+        Event::fake([PayuPaymentReceived::class, PayuPaymentCancelled::class]);
+
+        $order = $this->orderWithExistingTransaction(amount: 1500, payuId: 'PAYU-REPLAY');
+
+        // First a legitimate COMPLETED — order becomes `paid`.
+        $this->runJob($order, [
+            'payuOrderId' => 'PAYU-REPLAY',
+            'status' => 'COMPLETED',
+            'amount' => '1500',
+            'order_id' => (string) $order->id,
+        ]);
+        $this->assertSame('paid', $order->fresh()->status);
+
+        // Then the replayed CANCELED — must be rejected.
+        $this->runJob($order->fresh(), [
+            'payuOrderId' => 'PAYU-REPLAY',
+            'status' => 'CANCELED',
+            'amount' => '1500',
+            'order_id' => (string) $order->id,
+        ]);
+
+        $fresh = $order->fresh();
+        $this->assertSame('paid', $fresh->status, 'order must stay paid after replayed cancellation');
+        $this->assertSame('CANCELED', $fresh->meta['payu']['rejected_status'] ?? null);
+        Event::assertNotDispatched(PayuPaymentCancelled::class);
+    }
+
+    public function test_paid_order_still_allows_refund(): void
+    {
+        // The legitimate paid → refunded transition (real chargeback or
+        // refund issued) must pass through even after the downgrade guard
+        // is in place.
+        Event::fake([PayuPaymentRefunded::class]);
+
+        $order = $this->orderWithExistingTransaction(amount: 1500, payuId: 'PAYU-REFUND-AFTER-PAID');
+
+        $this->runJob($order, [
+            'payuOrderId' => 'PAYU-REFUND-AFTER-PAID',
+            'status' => 'COMPLETED',
+            'amount' => '1500',
+            'order_id' => (string) $order->id,
+        ]);
+        $this->assertSame('paid', $order->fresh()->status);
+
+        $this->runJob($order->fresh(), [
+            'payuOrderId' => 'PAYU-REFUND-AFTER-PAID',
+            'status' => 'REFUNDED',
+            'amount' => '1500',
+            'order_id' => (string) $order->id,
+        ]);
+
+        $this->assertSame('refunded', $order->fresh()->status);
+        Event::assertDispatched(PayuPaymentRefunded::class);
+    }
+
     /**
      * @param array{payuOrderId: string, status: string, amount: string, order_id: string} $payload
      */

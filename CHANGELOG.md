@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Status downgrade guard** in `UpdateOrderFromPayuStatus`. Once an order is `paid`, the only allowed next state is `refunded`. Replays of older `CANCELED` / `REJECTED` notifications no longer flip the order back. Order's `meta.payu.rejected_status` records the rejected payload for forensics.
+- **Per-order locking** in `ProcessPayuNotification` via `Cache::lock` keyed by Lunar order id. Prevents two concurrent workers from double-dispatching domain events for notifications that arrive within milliseconds of each other.
+- **DB transaction** wrapping the order update + audit-row write inside the job — partial failures roll back cleanly and the queue retry runs again under idempotency.
 - **PayU REST payment driver** for Lunar PHP — registers as `payu` in Lunar's `PaymentManager`.
 - `PayuClient` over Laravel `Http` facade — OAuth2 `client_credentials` flow with cached bearer tokens, auto-refresh on 401, `createOrder` against `POST /api/v2_1/orders`.
 - **HMAC-SHA256 webhook signature verification** (`PayuSignatureVerifier`) — parses the `OpenPayU-Signature` header, computes `sha256(body . second_key)`, constant-time compare via `hash_equals`. Legacy MD5 algorithm supported as a fallback for shops still on it.
