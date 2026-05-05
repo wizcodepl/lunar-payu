@@ -6,6 +6,7 @@ namespace WizcodePl\LunarPayu\Actions;
 
 use Illuminate\Support\Facades\Log;
 use Lunar\Models\Order;
+use WizcodePl\LunarPayu\Enums\LunarOrderStatus;
 use WizcodePl\LunarPayu\Enums\PayuTransactionStatus;
 
 /**
@@ -27,6 +28,7 @@ class UpdateOrderFromPayuStatus
     public function __invoke(Order $order, array $payload): PayuTransactionStatus
     {
         $resolved = $this->resolveStatus($payload['status']);
+        $currentLunarStatus = LunarOrderStatus::tryFrom((string) $order->status);
 
         if ($resolved === PayuTransactionStatus::Paid && ! $this->amountMatches($order, $payload['amount'])) {
             Log::channel((string) config('lunar-payu.log_channel', 'stack'))->warning(
@@ -43,15 +45,16 @@ class UpdateOrderFromPayuStatus
         }
 
         // Status downgrade guard — once an order is `paid`, only `refunded`
-        // is a legitimate next state. Replays of older `CANCELED` / `REJECTED`
-        // notifications (legitimately late, or maliciously replayed) must
-        // not flip the order back. `refunded` orders are terminal too.
-        if ($this->isDowngrade($order->status, $resolved)) {
+        // is a legitimate next state (refund issued from the PayU merchant
+        // panel). Replays of older `CANCELED` / `REJECTED` notifications
+        // (legitimately late, or maliciously replayed) cannot flip the
+        // order back. `refunded` orders are terminal too.
+        if ($currentLunarStatus !== null && $this->isDowngrade($currentLunarStatus, $resolved)) {
             Log::channel((string) config('lunar-payu.log_channel', 'stack'))->warning(
                 'lunar-payu | rejected notification that would downgrade an already-settled order',
                 [
                     'order_id' => $order->id,
-                    'current_order_status' => $order->status,
+                    'current_order_status' => $currentLunarStatus->value,
                     'reported_status' => $payload['status'],
                     'payuOrderId' => $payload['payuOrderId'],
                 ],
@@ -68,11 +71,11 @@ class UpdateOrderFromPayuStatus
 
             // Reflect current order state back to caller — the job's
             // idempotency check then sees "no transition" and skips events.
-            return $this->mirrorOrderStatus($order->status);
+            return $this->mirrorOrderStatus($currentLunarStatus);
         }
 
         $order->update([
-            'status' => $this->mapToOrderStatus($resolved),
+            'status' => $this->mapToOrderStatus($resolved)->value,
             'meta' => array_merge((array) $order->meta, [
                 'payu' => array_merge((array) ($order->meta['payu'] ?? []), [
                     'last_status' => $payload['status'],
@@ -96,42 +99,42 @@ class UpdateOrderFromPayuStatus
         };
     }
 
-    private function mapToOrderStatus(PayuTransactionStatus $status): string
+    private function mapToOrderStatus(PayuTransactionStatus $status): LunarOrderStatus
     {
         return match ($status) {
-            PayuTransactionStatus::Paid => 'paid',
-            PayuTransactionStatus::Refunded => 'refunded',
-            PayuTransactionStatus::Cancelled, PayuTransactionStatus::Failed => 'cancelled',
-            default => 'awaiting-payment',
+            PayuTransactionStatus::Paid => LunarOrderStatus::Paid,
+            PayuTransactionStatus::Refunded => LunarOrderStatus::Refunded,
+            PayuTransactionStatus::Cancelled, PayuTransactionStatus::Failed => LunarOrderStatus::Cancelled,
+            default => LunarOrderStatus::AwaitingPayment,
         };
     }
 
     /**
      * Order is "settled" (paid or refunded) and the incoming status would
      * move it to a non-allowed state. Allowed transitions:
-     *   paid     → refunded (legit refund / chargeback)
+     *   paid     → refunded (legit refund issued from PayU panel)
      *   paid     → paid     (duplicate notification — let through, idempotent)
      *   refunded → refunded (duplicate notification — let through)
      */
-    private function isDowngrade(string $currentOrderStatus, PayuTransactionStatus $incoming): bool
+    private function isDowngrade(LunarOrderStatus $current, PayuTransactionStatus $incoming): bool
     {
-        if ($currentOrderStatus === 'paid') {
+        if ($current === LunarOrderStatus::Paid) {
             return $incoming !== PayuTransactionStatus::Paid
                 && $incoming !== PayuTransactionStatus::Refunded;
         }
 
-        if ($currentOrderStatus === 'refunded') {
+        if ($current === LunarOrderStatus::Refunded) {
             return $incoming !== PayuTransactionStatus::Refunded;
         }
 
         return false;
     }
 
-    private function mirrorOrderStatus(string $currentOrderStatus): PayuTransactionStatus
+    private function mirrorOrderStatus(LunarOrderStatus $current): PayuTransactionStatus
     {
-        return match ($currentOrderStatus) {
-            'paid' => PayuTransactionStatus::Paid,
-            'refunded' => PayuTransactionStatus::Refunded,
+        return match ($current) {
+            LunarOrderStatus::Paid => PayuTransactionStatus::Paid,
+            LunarOrderStatus::Refunded => PayuTransactionStatus::Refunded,
             default => PayuTransactionStatus::RedirectPending,
         };
     }

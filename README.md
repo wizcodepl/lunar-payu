@@ -112,10 +112,22 @@ export PAYU_SECOND_KEY="..."
 composer test
 ```
 
-## What's intentionally not in v1.0
+## Refunds
 
-- **Refunds** — `refund()` returns `PaymentRefund(false, …)`. PayU does have `POST /api/v2_1/orders/{orderId}/refunds`; surface it in a follow-up release. For now process via the merchant panel.
-- **Recurring billing / saved cards** — PayU supports them but they need their own DTO/event surface and a token storage strategy. Out of v1.0 scope.
+Refunds are issued from the **PayU merchant panel** — this package does not expose a programmatic refund API. `refund()` on the driver returns `PaymentRefund(false, …)` by design.
+
+What the package **does** handle on the refund side:
+
+- `REFUNDED` webhooks from PayU are received, verified, and update the Lunar Order status to `refunded`.
+- A `PayuPaymentRefunded` domain event fires so listeners can release stock, notify the customer, alert finance, etc.
+- The audit row in `payu_transactions` records the refund event.
+
+So: trigger refunds in the panel, listen to the event in your app.
+
+## What's intentionally not in this package
+
+- **Programmatic refund API** — see above.
+- **Recurring billing / saved cards** — PayU supports them but they need their own DTO/event surface and a token storage strategy. Not in scope.
 - **Partial captures** — order is captured in full when PayU reports `COMPLETED`.
 - **Filament admin UI** — `Order.meta.payu` is the source of truth; surface it in your panel however you prefer.
 

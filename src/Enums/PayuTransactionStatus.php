@@ -14,7 +14,9 @@ namespace WizcodePl\LunarPayu\Enums;
  *                       to fire.
  *   Paid              — webhook reports the order COMPLETED.
  *   Failed            — webhook reports REJECTED (declined / blocked).
- *   Refunded          — webhook reports a refund.
+ *   Refunded          — webhook reports a refund (issued from the PayU
+ *                       merchant panel; the package does not initiate
+ *                       refunds programmatically).
  *   Cancelled         — webhook reports CANCELED.
  */
 enum PayuTransactionStatus: string
