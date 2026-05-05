@@ -1,6 +1,6 @@
 {
     "name": "wizcodepl/lunar-payu",
-    "description": "PayU REST payment driver for Lunar PHP — recurring billing, refunds, partial captures, webhook-driven status sync.",
+    "description": "PayU REST payment driver for Lunar PHP — authorize, redirect, HMAC-verified webhook capture.",
     "type": "library",
     "license": "MIT",
     "keywords": [
