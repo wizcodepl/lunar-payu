@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="art/logo.svg" alt="Lunar PayU" width="200">
+</p>
+
 # lunar-payu
 
 PayU REST payment driver for [Lunar PHP](https://lunarphp.io).
